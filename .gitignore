@@ -15,3 +15,5 @@ data
 err_python*
 out_python*
 *.png
+processed_files
+.DS_Store

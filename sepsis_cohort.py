@@ -94,9 +94,9 @@ microbio['charttime'] = microbio['charttime'].fillna(microbio['chartdate'])
 del microbio['chartdate']
 bacterio = pd.concat([microbio, culture], sort=False, ignore_index=True)
 
-demog['morta_90'].fillna(0, inplace=True)
-demog['morta_hosp'].fillna(0, inplace=True)
-demog['elixhauser'].fillna(0, inplace=True)
+demog['morta_90'] = demog['morta_90'].fillna(0)
+demog['morta_hosp'] = demog['morta_hosp'].fillna(0)
+demog['elixhauser'] = demog['elixhauser'].fillna(0)
 
 # Keep only the first icustay of an admission (CRITICAL FIX FROM MATLAB CODE)
 demog = demog.drop_duplicates(subset=['admittime','dischtime'],keep='first')
@@ -113,7 +113,7 @@ icustayidlist = list(demog.icustay_id.values)
 
 # This is done by grouping all the discharge times for each patient and using them in a comparison 
 # with the current row's admission time to see if it's within the 30 day cutoff
-subj_dischtime_list = demog.sort_values(by='admittime').groupby('subject_id').apply(lambda df: np.unique(df.dischtime.values)) # Create list of discharge times for each patient (output is a dict keyed by 'subject_id')
+subj_dischtime_list = demog.sort_values(by='admittime').groupby('subject_id').apply(lambda df: np.unique(df.dischtime.values), include_groups=False) # Create list of discharge times for each patient (output is a dict keyed by 'subject_id')
 
 def determine_readmission(s, dischtimes=subj_dischtime_list,cutoff=3600*24*30):
     '''
@@ -182,7 +182,7 @@ def fixgaps(x):
     return y
 
 def deloutabove(a, col_no, a_max):
-    a[a[:,col_no] > a_max, col_no] = np.nan 
+    a[a[:,col_no] > a_max, col_no] = np.nan
     return a
 
 def deloutbelow(a, col_no, a_min):
@@ -862,8 +862,8 @@ reformat4t.loc[reformat4t['mechvent'] > 0, 'mechvent'] = 1
 reformat4t['elixhauser'].loc[np.isnan(reformat4t['elixhauser'])] = np.nanmedian(reformat4t['elixhauser'])   #use the median value / only a few missing data points 
 
 # Vasopressors / no NAN
-reformat4t['median_dose_vaso'].fillna(0, inplace=True)
-reformat4t['max_dose_vaso'].fillna(0, inplace=True)
+reformat4t['median_dose_vaso'] = reformat4t['median_dose_vaso'].fillna(0)
+reformat4t['max_dose_vaso'] = reformat4t['max_dose_vaso'].fillna(0)
 
 # Recompute P/F with no missing values...
 reformat4t['PaO2_FiO2'] = reformat4t['paO2']/reformat4t['FiO2_1']
@@ -871,7 +871,7 @@ reformat4t['PaO2_FiO2'] = reformat4t['paO2']/reformat4t['FiO2_1']
 # Recompute SHOCK INDEX without NAN and INF
 reformat4t['Shock_Index'] = reformat4t['HR']/reformat4t['SysBP']
 
-reformat4t.loc[np.isinf(reformat4t['Shock_Index']), 'Shock_Index'] = np.NaN
+reformat4t.loc[np.isinf(reformat4t['Shock_Index']), 'Shock_Index'] = np.nan
 
 d = np.nanmean(reformat4t['Shock_Index'])
 reformat4t['Shock_Index'].fillna(d, inplace=True)
@@ -1558,9 +1558,9 @@ reformat4t['PaO2_FiO2'] = reformat4t['paO2']/reformat4t['FiO2_1']
 # Recompute SHOCK INDEX without NAN and INF
 reformat4t['Shock_Index'] = reformat4t['HR']/reformat4t['SysBP']
 
-reformat4t.loc[np.isinf(reformat4t['Shock_Index']), 'Shock_Index'] = np.NaN
+reformat4t.loc[np.isinf(reformat4t['Shock_Index']), 'Shock_Index'] = np.nan
 d = np.nanmean(reformat4t['Shock_Index'])
-reformat4t['Shock_Index'].fillna(d, inplace=True)
+reformat4t['Shock_Index'] = reformat4t['Shock_Index'].fillna(d)
 
 shock_idx = reformat4t['Shock_Index'] >= np.quantile(reformat4t['Shock_Index'], 0.999)
 reformat4t.loc[shock_idx, 'Shock_Index'] = np.quantile(reformat4t['Shock_Index'], 0.999)
@@ -1579,8 +1579,7 @@ s6=np.array([s[:,6]<1.2, (s[:,6 ]>=1.2) & (s[:, 6]<2), (s[:, 6]>=2) & (s[:, 6]<3
 num_columns = reformat4t.shape[1]   # Number of variables in data
 newcols_reformat4 = np.zeros((reformat4t.shape[0],7))
 for i in range(reformat4t.shape[0]): 
-    t = max(p[s1[:,i]], default=0) + max(p[s2[:,i]], default=0) + max(p[s3[:,i]], default=0) + max(p[s4[:,i]], default=0) 
-        + max(p[s5[:,i]], default=0) + max(p[s6[:,i]], default=0)  #SUM OF ALL 6 CRITERIA
+    t = max(p[s1[:,i]], default=0) + max(p[s2[:,i]], default=0) + max(p[s3[:,i]], default=0) + max(p[s4[:,i]], default=0) + max(p[s5[:,i]], default=0) + max(p[s6[:,i]], default=0)  #SUM OF ALL 6 CRITERIA
     if t > 0:
         newcols_reformat4[i,:] = [max(p[s1[:,i]], default=0), max(p[s2[:,i]], default=0), max(p[s3[:,i]], default=0), 
             max(p[s4[:,i]], default=0), max(p[s5[:,i]], default=0), max(p[s6[:,i]], default=0), t]
@@ -1615,13 +1614,13 @@ if pargs.save_intermediate:
 colmeta = ['presumed_onset', 'charttime', 'icustayid']  # Meta-data around patient stay
 colbin = ['gender', 'mechvent', 'max_dose_vaso', 're_admission']  # Binary features
 # Patient features that will be z-normalize
-colnorm = ['age', 'Weight_kg', 'GCS', 'HR', 'SysBP', 'MeanBP', 'DiaBP', 'RR', 'Temp_C', 'FiO2_1',\ 
-        'Potassium', 'Sodium', 'Chloride', 'Glucose', 'Magnesium', 'Calcium', 'Hb', \
-        'WBC_count', 'Platelets_count', 'PTT', 'PT', 'Arterial_pH', 'paO2', 'paCO2',\
-        'Arterial_BE', 'HCO3', 'Arterial_lactate', 'SOFA', 'SIRS', 'Shock_Index',\
+colnorm = ['age', 'Weight_kg', 'GCS', 'HR', 'SysBP', 'MeanBP', 'DiaBP', 'RR', 'Temp_C', 'FiO2_1',
+        'Potassium', 'Sodium', 'Chloride', 'Glucose', 'Magnesium', 'Calcium', 'Hb', 
+        'WBC_count', 'Platelets_count', 'PTT', 'PT', 'Arterial_pH', 'paO2', 'paCO2',
+        'Arterial_BE', 'HCO3', 'Arterial_lactate', 'SOFA', 'SIRS', 'Shock_Index',
         'PaO2_FiO2', 'cumulated_balance']
 # Patient features that will be log-normalized
-collog=['SpO2', 'BUN', 'Creatinine', 'SGOT', 'SGPT', 'Total_bili', 'INR',\ 
+collog=['SpO2', 'BUN', 'Creatinine', 'SGOT', 'SGPT', 'Total_bili', 'INR',
         'input_total', 'input_4hourly', 'output_total', 'output_4hourly']
 
 # find patients who died in ICU during data collection period
@@ -1639,7 +1638,7 @@ MIMICzs[:,46] = 2*MIMICzs[:,46]  # Increase weight of this variable
 # compute conversion factors using MIMIC data
 a = MIMICtable['input_4hourly'].values  # IV fluid
 a = stats.rankdata(a[a>0])/len(a[a>0]) # excludes zero fluid (will be action 1)
-iof = np.floor((a+0.2499999999)*4).astype(np.int) #converts iv volume in 4 actions
+iof = np.floor((a+0.2499999999)*4).astype(int) #converts iv volume in 4 actions
 a = MIMICtable['input_4hourly'] > 0 # location of non-zero fluid in big matrix
 io = np.ones(MIMICtable.shape[0]) # array of ones, by default     
 io[a] = iof + 1 # where more than zero fluid given: save actual action
