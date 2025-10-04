@@ -1,3 +1,5 @@
+***** New Oct 4th, 2025: Upgrade Python to version 3.9 and update all required packages.  *****
+
 # Sepsis Cohort from MIMIC III
 
 This repo provides code for generating the sepsis cohort from MIMIC III dataset. Our main goal is to facilitate reproducibility of results in the literature. 
